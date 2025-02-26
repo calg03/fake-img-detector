@@ -142,8 +142,7 @@ add_bg_gradient()
 st.markdown('<p class="title">Detector de Imágenes Falsas</p>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle">Carga una imagen para determinar si fue generada por IA o es real</p>', unsafe_allow_html=True)
 
-# Descargar pesos del modelo desde Google Drive
-@st.cache_resource
+
 def download_model_weights():
     try:
         import gdown
@@ -181,8 +180,7 @@ def download_model_weights():
         st.sidebar.error(f"⚠️ Error descargando pesos: {str(e)}")
         return None
 
-# Funcionalidad de carga del modelo
-@st.cache_resource
+
 def load_model():
     # Importar PyTorch dentro de la función para evitar problemas con el observador de archivos
     import torch
