@@ -13,7 +13,7 @@ def extract_file_id(url):
     return None
 
 # URL de Google Drive
-GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/1tY9eX1YE0VnKfoYXJq4kLibjFEnyRvxK/view?usp=sharing"
+GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/19pnfyKQJafNtInRRvsCS-b1D6AmGpbkH/view?usp=drive_link"
 GOOGLE_DRIVE_FILE_ID = extract_file_id(GOOGLE_DRIVE_URL)
 
 # Configuración de la página
@@ -196,14 +196,8 @@ def load_model():
     model = models.convnext_base(weights=models.ConvNeXt_Base_Weights.IMAGENET1K_V1)
 
     # Clasificador personalizado como en test_model.py
-    model.classifier = nn.Sequential(
-        nn.AdaptiveAvgPool2d((1, 1)),
-        nn.Flatten(),
-        nn.Linear(1024, 512),
-        nn.ReLU(inplace=True),
-        nn.Dropout(0.5),
-        nn.Linear(512, 2)
-    )
+    num_ftrs = model.classifier[2].in_features
+    model.classifier[2] = nn.Linear(num_ftrs, 2)
     
     # Intentar descargar pesos desde Google Drive
     weights_path = download_model_weights()
