@@ -13,7 +13,7 @@ def extract_file_id(url):
     return None
 
 # URL de Google Drive
-GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/19pnfyKQJafNtInRRvsCS-b1D6AmGpbkH/view?usp=drive_link"
+GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/1UBO-bm7WWS9HJgREN5Tmp1DJLePxNEny/view?usp=drive_link"
 GOOGLE_DRIVE_FILE_ID = extract_file_id(GOOGLE_DRIVE_URL)
 
 # Configuración de la página
