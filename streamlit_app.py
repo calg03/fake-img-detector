@@ -193,12 +193,16 @@ def load_model():
     device = torch.device("cpu")
     
     # Crear modelo con arquitectura ConvNeXt (de test_model.py)
-    model = models.convnext_large(weights=models.ConvNeXt_Large_Weights.IMAGENET1K_V1)
-
-    # Clasificador personalizado como en test_model.py
+    model = models.convnext_large(weights=None)
     num_ftrs = model.classifier[2].in_features
     model.classifier[2] = nn.Linear(num_ftrs, 2)
-    
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
+                
     # Intentar descargar pesos desde Google Drive
     weights_path = download_model_weights()
     
@@ -210,8 +214,9 @@ def load_model():
     # Cargar pesos si están disponibles
     if weights_path and os.path.exists(weights_path):
         try:
-            checkpoint = torch.load(weights_path, map_location=device)
-            if 'model_state_dict' in checkpoint:
+            # Usando weights_only=True para mayor compatibilidad
+            checkpoint = torch.load(weights_path, map_location=device, weights_only=True)
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
                 model.load_state_dict(checkpoint['model_state_dict'])
             else:
                 model.load_state_dict(checkpoint)
