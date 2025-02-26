@@ -13,7 +13,7 @@ def extract_file_id(url):
     return None
 
 # URL de Google Drive
-GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/1UBO-bm7WWS9HJgREN5Tmp1DJLePxNEny/view?usp=drive_link"
+GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/19pnfyKQJafNtInRRvsCS-b1D6AmGpbkH/view?usp=drive_link"
 GOOGLE_DRIVE_FILE_ID = extract_file_id(GOOGLE_DRIVE_URL)
 
 # Configuración de la página
@@ -193,7 +193,7 @@ def load_model():
     device = torch.device("cpu")
     
     # Crear modelo con arquitectura ConvNeXt (de test_model.py)
-    model = models.convnext_base(weights=models.ConvNeXt_Base_Weights.IMAGENET1K_V1)
+    model = models.convnext_large(weights=models.ConvNeXt_Large_Weights.IMAGENET1K_V1)
 
     # Clasificador personalizado como en test_model.py
     num_ftrs = model.classifier[2].in_features
