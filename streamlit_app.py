@@ -1,11 +1,10 @@
 import streamlit as st
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
-from PIL import Image
-import io
-import base64
 import os
+from PIL import Image
+import subprocess
+
+# Setting environment variable might not be enough
+os.environ["STREAMLIT_WATCH_FILE"] = "false"
 
 # Set page configuration
 st.set_page_config(
@@ -128,6 +127,11 @@ col1, col2 = st.columns([3, 2])
 # Model loading functionality
 @st.cache_resource
 def load_model():
+    # Import PyTorch inside function to avoid file watcher issues
+    import torch
+    import torch.nn as nn
+    from torchvision import models
+    
     # Using a pretrained ResNet model as an example
     model = models.resnet18(pretrained=True)
     model.eval()
@@ -140,6 +144,10 @@ def load_model():
 
 # Image preprocessing
 def preprocess_image(image):
+    # Import PyTorch inside function to avoid file watcher issues
+    import torch
+    from torchvision import transforms
+    
     preprocess = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -180,12 +188,15 @@ with col1:
             
             # Display the image
             st.markdown('<div class="image-container">', unsafe_allow_html=True)
-            st.image(image, caption="Uploaded Image", use_column_width=True)
+            st.image(image, caption="Uploaded Image", use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
             
             # Process button
             if st.button("Analyze Image"):
                 with st.spinner("Processing..."):
+                    # Import PyTorch inside function to avoid file watcher issues
+                    import torch
+                    
                     # Load model
                     model = load_model()
                     
