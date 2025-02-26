@@ -297,7 +297,7 @@ with col1:
                     pred_class = output.argmax(dim=1).item()
                     
                     # Nombres de clases
-                    class_names = ["Generada por IA", "Creada por un humano"]
+                    class_names = ["Creada por un humano", "Generada por IA"]
                     
                     # Mostrar resultados
                     st.markdown("### Resultado")
