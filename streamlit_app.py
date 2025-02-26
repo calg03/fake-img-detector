@@ -1,19 +1,30 @@
 import streamlit as st
 import os
+import re
 from PIL import Image
+import tempfile
 
-# Set fixed path for model weights
-MODEL_WEIGHTS_PATH = "model_weights.pth"  # Fixed path to your weights file
+# Extraer ID del archivo desde la URL de Google Drive
+def extract_file_id(url):
+    pattern = r'\/d\/([a-zA-Z0-9_-]+)'
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    return None
 
-# Set page configuration
+# URL de Google Drive
+GOOGLE_DRIVE_URL = "https://drive.google.com/file/d/1tY9eX1YE0VnKfoYXJq4kLibjFEnyRvxK/view?usp=sharing"
+GOOGLE_DRIVE_FILE_ID = extract_file_id(GOOGLE_DRIVE_URL)
+
+# Configuración de la página
 st.set_page_config(
-    page_title="AI Vision Analyzer",
+    page_title="Detector de Imágenes IA",
     page_icon="🔮",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for glassmorphism effect and modern typography
+# CSS personalizado con tamaño de imagen fijo
 def add_custom_css():
     css = """
     <style>
@@ -49,22 +60,6 @@ def add_custom_css():
             font-size: 1.2rem;
         }
         
-        .custom-upload-btn {
-            font-weight: 600;
-            border-radius: 10px;
-            border: none;
-            padding: 0.5rem 1rem;
-            background: linear-gradient(45deg, #7928CA, #FF0080);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .custom-upload-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
         .stButton>button {
             background: linear-gradient(45deg, #7928CA, #FF0080);
             color: white;
@@ -73,6 +68,7 @@ def add_custom_css():
             border-radius: 10px;
             font-weight: 600;
             transition: all 0.3s ease;
+            margin-top: 20px;
         }
         
         .stButton>button:hover {
@@ -80,12 +76,10 @@ def add_custom_css():
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         
-        /* Add a gradient background */
         .main {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         
-        /* Style for prediction results */
         .prediction-result {
             font-weight: 600;
             font-size: 1.5rem;
@@ -93,51 +87,115 @@ def add_custom_css():
             margin-top: 1rem;
         }
         
-        /* Image container */
+        /* Contenedor de imagen de tamaño fijo */
         .image-container {
-            border-radius: 15px;
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
+            border-radius: 15px;
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
             margin: 1rem 0;
+        }
+        
+        .image-container img {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+        }
+        
+        /* Mejor organización de secciones */
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        
+        .analyze-section {
+            margin-top: 20px;
+        }
+        
+        /* Estilo del pie de página */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 40px;
         }
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
-# Add the custom CSS
-add_custom_css()
-
-# Create background gradient
+# Añadir gradiente de fondo
 def add_bg_gradient():
     bg_gradient = """
     <div class="main" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>
     """
     st.markdown(bg_gradient, unsafe_allow_html=True)
 
+# Aplicar estilos
+add_custom_css()
 add_bg_gradient()
 
-# Header section
-st.markdown('<p class="title">AI Vision Analyzer</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Upload an image to analyze with our powerful deep learning model</p>', unsafe_allow_html=True)
+# Sección de encabezado
+st.markdown('<p class="title">Detector de Imágenes Falsas</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Carga una imagen para determinar si fue generada por IA o es real</p>', unsafe_allow_html=True)
 
-# Create two columns for layout
-col1, col2 = st.columns([3, 2])
+# Descargar pesos del modelo desde Google Drive
+@st.cache_resource
+def download_model_weights():
+    try:
+        import gdown
+        
+        # Crear un directorio temporal para los pesos
+        temp_dir = tempfile.gettempdir()
+        weights_path = os.path.join(temp_dir, "model_weights.pth")
+        
+        # Verificar si el archivo ya existe (para evitar volver a descargarlo)
+        if os.path.exists(weights_path):
+            st.sidebar.success("✅ Usando pesos del modelo previamente descargados")
+            return weights_path
+            
+        # Verificar si el ID del archivo es válido
+        if not GOOGLE_DRIVE_FILE_ID:
+            st.sidebar.error("⚠️ ID de archivo de Google Drive no válido")
+            return None
+            
+        # Descargar archivo desde Google Drive
+        with st.sidebar.status("Descargando el modelo predictor de IA..."):
+            url = f"https://drive.google.com/uc?id={GOOGLE_DRIVE_FILE_ID}"
+            result = gdown.download(url, weights_path, quiet=False)
+            
+        if result and os.path.exists(weights_path):
+            st.sidebar.success("✅ Se descargaron los pesos del modelo correctamente")
+            return weights_path
+        else:
+            st.sidebar.error("⚠️ Error al descargar los pesos del modelo")
+            return None
+    
+    except ImportError:
+        st.sidebar.error("⚠️ Por favor instala gdown: pip install gdown")
+        return None
+    except Exception as e:
+        st.sidebar.error(f"⚠️ Error descargando pesos: {str(e)}")
+        return None
 
-# Model loading functionality - loads once and caches
+# Funcionalidad de carga del modelo
 @st.cache_resource
 def load_model():
-    # Import PyTorch inside function to avoid file watcher issues
+    # Importar PyTorch dentro de la función para evitar problemas con el observador de archivos
     import torch
     import torch.nn as nn
     from torchvision import models
     
-    # Always use CPU for consistent deployment
+    # Usar siempre CPU para un despliegue coherente
     device = torch.device("cpu")
     
-    # Create model with ConvNeXt architecture (from test_model.py)
+    # Crear modelo con arquitectura ConvNeXt (de test_model.py)
     model = models.convnext_base(weights=models.ConvNeXt_Base_Weights.IMAGENET1K_V1)
 
-    # Custom classifier as in test_model.py
+    # Clasificador personalizado como en test_model.py
     model.classifier = nn.Sequential(
         nn.AdaptiveAvgPool2d((1, 1)),
         nn.Flatten(),
@@ -147,32 +205,40 @@ def load_model():
         nn.Linear(512, 2)
     )
     
-    # Load weights if file exists
-    if os.path.exists(MODEL_WEIGHTS_PATH):
+    # Intentar descargar pesos desde Google Drive
+    weights_path = download_model_weights()
+    
+    # Si tenemos una copia local como respaldo
+    if not weights_path and os.path.exists("model_weights.pth"):
+        weights_path = "model_weights.pth"
+        st.sidebar.info("Usando pesos de manera local")
+    
+    # Cargar pesos si están disponibles
+    if weights_path and os.path.exists(weights_path):
         try:
-            checkpoint = torch.load(MODEL_WEIGHTS_PATH, map_location=device)
+            checkpoint = torch.load(weights_path, map_location=device)
             if 'model_state_dict' in checkpoint:
                 model.load_state_dict(checkpoint['model_state_dict'])
             else:
                 model.load_state_dict(checkpoint)
-            st.sidebar.success(f"✅ Model weights loaded successfully")
+            st.sidebar.success("✅ Pesos del modelo cargados correctamente")
         except Exception as e:
-            st.sidebar.error(f"⚠️ Error loading weights: {str(e)}")
+            st.sidebar.error(f"⚠️ Error al cargar los pesos: {str(e)}")
     else:
-        st.sidebar.warning(f"⚠️ Model weights file not found at: {MODEL_WEIGHTS_PATH}")
+        st.sidebar.warning("⚠️ Pesos del modelo no disponibles. Usando pesos pre-entrenados de ImageNet.")
     
     model.eval()
     return model, device
 
-# Image preprocessing
+# Preprocesamiento de imágenes
 def preprocess_image(image):
-    # Import PyTorch inside function to avoid file watcher issues
+    # Importar PyTorch dentro de la función para evitar problemas con el observador de archivos
     import torch
     from torchvision import transforms
     
-    # Use same transforms as in test_model.py
+    # Usar las mismas transformaciones que en test_model.py
     preprocess = transforms.Compose([
-        transforms.Resize(232),  # Match training resize
+        transforms.Resize(232),  # Coincidir con el tamaño de entrenamiento
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -181,102 +247,114 @@ def preprocess_image(image):
     image_tensor = preprocess(image).unsqueeze(0)
     return image_tensor
 
+# Crear dos columnas para el diseño
+col1, col2 = st.columns([3, 2])
+
 with col1:
     st.markdown('<div class="glassmorphism">', unsafe_allow_html=True)
     
-    # File uploader widget - only input needed from user
+    # Sección de carga
+    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
-        "Choose an image...", 
+        "Carga una imagen...", 
         type=["jpg", "jpeg", "png"],
-        help="Upload an image to analyze"
+        help="Formatos aceptados: JPG, JPEG, PNG"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
     
+    # Crear columnas para la imagen y el botón para organizar mejor el espacio
     if uploaded_file is not None:
         try:
-            # Open image
+            # Mostrar imagen con tamaño fijo
             image = Image.open(uploaded_file).convert('RGB')
             
-            # Display the image
+            # Usando HTML/CSS para un contenedor de imagen de tamaño fijo
             st.markdown('<div class="image-container">', unsafe_allow_html=True)
-            st.image(image, caption="Uploaded Image", use_container_width=True)
+            st.image(image, use_container_width=False)
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # Process button
-            if st.button("Analyze Image"):
-                with st.spinner("Processing..."):
-                    # Import PyTorch inside function to avoid file watcher issues
+            # Botón de análisis - ahora aparecerá directamente debajo de la imagen
+            st.markdown('<div class="analyze-section">', unsafe_allow_html=True)
+            analyze_button = st.button("Analizar imagen")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Procesar al hacer clic en el botón
+            if analyze_button:
+                with st.spinner("Procesando imagen..."):
+                    # Importar PyTorch solo cuando sea necesario
                     import torch
                     
-                    # Load model (will use cached version after first load)
+                    # Cargar modelo (en caché después de la primera carga)
                     model, device = load_model()
                     
-                    # Preprocess image
+                    # Procesar imagen
                     input_tensor = preprocess_image(image)
                     input_tensor = input_tensor.to(device)
                     
-                    # Get prediction
+                    # Ejecutar inferencia
                     with torch.no_grad():
                         output = model(input_tensor)
                     
-                    # Get results
+                    # Obtener resultados de predicción
                     probabilities = torch.nn.functional.softmax(output, dim=1)[0] * 100
                     pred_class = output.argmax(dim=1).item()
                     
-                    # Class labels for AI vs Human model
-                    class_names = ["Generated by AI", "Created by Human"]
+                    # Nombres de clases
+                    class_names = ["Generada por IA", "Creada por un humano"]
                     
-                    # Display results
-                    st.markdown("### Results")
+                    # Mostrar resultados
+                    st.markdown("### Resultado")
                     st.markdown(
-                        f'<div class="prediction-result">This image was most likely {class_names[pred_class]}</div>', 
+                        f'<div class="prediction-result">Esta imagen fue {class_names[pred_class].lower()}</div>', 
                         unsafe_allow_html=True
                     )
                     
-                    # Show confidence bars
-                    st.markdown("### Confidence")
+                    # Barras de confianza
+                    st.markdown("### Nivel de confianza")
                     for i, class_name in enumerate(class_names):
                         st.markdown(f"**{class_name}:** {probabilities[i]:.2f}%")
                         st.progress(float(probabilities[i]/100))
-                    
+        
         except Exception as e:
-            st.error(f"Error processing image: {e}")
+            st.error(f"Error al procesar la imagen: {e}")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
     st.markdown('<div class="glassmorphism">', unsafe_allow_html=True)
-    st.markdown("### How It Works")
+    st.markdown("### Pasos")
     st.write("""
-    1. Upload your image using the file selector
-    2. Our AI model will analyze the image 
-    3. View the detailed analysis results
+    1. Subir tu imagen al selector de archivos
+    2. El modelo de IA analizará la imagen
+    3. Visualiza los resultados del análisis
     
-    This application uses a state-of-the-art deep learning model trained to distinguish between AI-generated images and human-created photographs.
+    Esta aplicación utiliza un modelo avanzado de aprendizaje profundo entrenado para distinguir entre imágenes generadas por IA y fotografías creadas por humanos.
     """)
     
-    st.markdown("### About the Model")
+    st.markdown("### Acerca del modelo")
     st.write("""
-    Our model is built with PyTorch and uses a ConvNeXt architecture with custom classifier layers. 
-    It has been trained on thousands of images to recognize the subtle patterns and artifacts that 
-    differentiate AI-generated images from human photographs.
+    Nuestro modelo está construido con PyTorch y utiliza una arquitectura ConvNeXt con capas clasificadoras personalizadas.
+    
+    Ha sido entrenado con miles de imágenes para reconocer los patrones y artefactos que diferencian las imágenes 
+    generadas por IA de las fotografías creadas por humanos.
     """)
     
-    # Add some metrics or stats about the model
-    st.markdown("### Model Performance")
+    # Añadir algunas métricas o estadísticas sobre el modelo
+    st.markdown("### Rendimiento del modelo")
     col_a, col_b, col_c = st.columns(3)
     with col_a:
-        st.metric(label="Accuracy", value="91.3%")
+        st.metric(label="Precisión", value="91.3%")
     with col_b:
-        st.metric(label="Classes", value="2")
+        st.metric(label="Clases", value="2")
     with col_c:
-        st.metric(label="Speed", value="0.3s")
+        st.metric(label="Velocidad", value="0.3s")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Footer
+# Pie de página
 footer = """
 <div style="text-align: center; margin-top: 40px; padding: 20px;">
-    <p style="color: #666; font-size: 0.8rem;">© 2025 AI Vision Analyzer | Created with Streamlit and PyTorch</p>
+    <p style="color: #666; font-size: 0.8rem;">© 2025 Detector de Imágenes IA | Creado con Streamlit y PyTorch</p>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
